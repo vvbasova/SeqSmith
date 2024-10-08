@@ -1,4 +1,5 @@
 from typing import Union, List, Dict, Tuple
+import os
 
 from utils.dna_rna_utils import (
     is_dna,
@@ -15,7 +16,9 @@ from utils.dna_rna_utils import (
 from utils.filter_fastq_utils import (
     filter_gc,
     filter_length,
-    filter_quality
+    filter_quality,
+    fastq_to_dict_generator,
+    convert_dict_to_fastq
 )
 
 
@@ -28,34 +31,33 @@ def run_dna_rna_tools(
     List[Union[str, bool, Dict[str, int]]]
 ]:
     """
-    Функция принимает последовательности нуклеиновых кислот и
-    процедуру для их преобразования.
-    Функция выполняет проверку, являются ли последовательности и
-    процедура корректными, и, если нет, поднимает ValueError.
-    Последовательность нуклеиновых кислот может содержать только
-    следующие символы: A, T, C, G, U, a, t, c, g, u
-    Последовательность не может одновременно содержать символы T/t и U/u
+    Takes nucleic acid sequences and a procedure for transforming them.
+    Checks whether the sequences and the procedure are valid
+    and if not, raises a ValueError.
+    The nucleic acid sequence may only contain the following characters:
+    A, T, C, G, U, a, t, c, g, u
+    The sequence cannot contain both T/t and U/u characters simultaneously.
 
     Args:
         *args: str
-        Первыми предеаются строка/строки,
-        содержащие последовательность нуклеиновых кислот.
-        Последней передаётся строка, содержащая процедуру:
-        - transcribe: Транскрибировать последовательности
-        - reverse: Перевернуть последовательности
-        - complement: Построить комплементарные последовательности
-        - reverse_complement: Перевернутые комплементарные
-        - gc_content: Вычислить процент содержания G и C
-        - is_palindrome: Проверить, являются ли последовательности палиндромами
-        - nucleotide_count: Подсчитать количество каждого нуклеотида
+        The first arguments are one or more strings containing
+        nucleic acid sequences.
+        The last argument is a string containing the procedure:
+        - transcribe: Transcribe the sequences
+        - reverse: Reverse the sequences
+        - complement: Build complementary sequences
+        - reverse_complement: Build reversed complementary sequences
+        - gc_content: Calculate the percentage of G and C content
+        - is_palindrome: Check if the sequences are palindromes
+        - nucleotide_count: Count the number of each nucleotide
 
     Returns:
         str | bool | dict | list of str | list of bool | list of dict
-        Результаты процедуры для одной или нескольких последовательностей.
+        The results of the procedure for one or more sequences.
 
     Raises:
-        ValueError: Если последовательность содержит некорректные символы
-        либо является пустой строкой.
+        ValueError:
+        If the sequence contains invalid characters or is an empty string.
     """
     procedure = args[-1]
     sequences = list(args[:-1])
@@ -83,51 +85,60 @@ def run_dna_rna_tools(
 
 
 def filter_fastq(
-        seqs: Dict[str, Tuple[str, str]],
+        input_fastq: str,
+        output_fastq: str,
         gc_bounds: Union[
             Tuple[Union[int, float], Union[int, float]],
             int,
             float
         ] = (0, 100),
-        length_bounds: Union[
-            Tuple[int, int],
-            int
-        ] = (0, 2**32),
+        length_bounds: Union[Tuple[int, int], int] = (0, 2**32),
         quality_threshold: Union[int, float] = 0
-) -> Dict[str, Tuple[str, str]]:
+) -> None:
     """
-    Фильтрует последовательности формата FASTQ
-    по длине, содержанию GC и качеству.
-    Если функции подается одно число в качестве границ содержания GC или длины
-    последовательности, оно принимается за верхнюю границу.
+    Filters reads from a fastq file based on GC content,
+    sequence length, and quality score, and writes the filtered reads
+    to a new fastq file in the 'filtered' directory.
+    If the 'filtered' directory does not exist, creates it.
 
     Args:
-        seqs: dict
-        Словарь, где ключ — ID последовательности, значение —
-        кортеж с последовательностью и её качеством.
-        gc_bounds: tuple | int | float
-        Диапазон допустимого содержания GC. По умолчанию (0, 100).
-        length_bounds: tuple | int
-        Диапазон допустимых длин последовательностей. По умолчанию (0, 2**32).
-        quality_threshold: int | float
-        Минимальный порог качества. По умолчанию 0.
+        input_fastq (str):
+            Path to the input fastq file.
+        output_fastq (str):
+            Name of the output filtered fastq file.
+            The file will be created in the 'filtered' directory.
+        gc_bounds (Union[Tuple, int, float]):
+            GC content bounds. If a single value is provided, it is
+            interpreted as the upper bound. Default is (0, 100).
+        length_bounds (Union[Tuple[int, int], int], optional):
+            Sequence length bounds.If a single value is provided, it is
+            interpreted as the upper bound. Default is (0, 2**32).
+        quality_threshold (Union[int, float]):
+            Minimum read quality score. Default is 0.
 
-    Returns:
-        dict
-        Отфильтрованный словарь удовлетворяющих условиям последовательностей.
+    Returns: None
 
+    Raises:
+        FileExistsError:
+            If the output file with the specified name already
+            exists in the 'filtered' directory, the function raises
+            an error to prevent accidental overwriting of existing data.
     """
+    output_path = os.path.join('filtered', output_fastq)
+    if os.path.exists(output_path):
+        raise FileExistsError(f"File {output_fastq} already exists.")
 
     if isinstance(gc_bounds, (int, float)):
         gc_bounds = (0, gc_bounds)
     if isinstance(length_bounds, (int, float)):
         length_bounds = (0, length_bounds)
 
-    filtered_seqs = filter_length(seqs, length_bounds)
+    for seq_dict in fastq_to_dict_generator(input_fastq):
+        if not filter_length(seq_dict, length_bounds):
+            continue
+        if not filter_gc(seq_dict, gc_bounds):
+            continue
+        if not filter_quality(seq_dict, quality_threshold):
+            continue
 
-    if gc_bounds != (0, 100):
-        filtered_seqs = filter_gc(filtered_seqs, gc_bounds)
-    if quality_threshold > 0:
-        filtered_seqs = filter_quality(filtered_seqs, quality_threshold)
-
-    return filtered_seqs
+        convert_dict_to_fastq(seq_dict, output_fastq)
