@@ -1,4 +1,5 @@
 from typing import Union, Dict, Tuple
+import os
 
 
 def filter_length(seqs: Dict[str, Tuple[str, str]],
@@ -51,3 +52,37 @@ def filter_quality(seqs: Dict[str, Tuple[str, str]],
             filtered_quality_seqs[name] = (sequence, quality)
 
     return filtered_quality_seqs
+
+
+def fastq_to_dict_generator(input_fastq: str) -> None:
+    with open(input_fastq, 'r') as fastq_file:
+        while True:
+            try:
+                name = next(fastq_file).strip()
+                sequence = next(fastq_file).strip()
+                next(fastq_file)
+                quality = next(fastq_file).strip()
+
+                yield {name: (sequence, quality)}
+
+            except StopIteration:
+                break
+
+
+def convert_dict_to_fastq(
+        seq_dict: Dict[str, Tuple[str, str]],
+        output_fastq: str
+) -> None:
+    output_directory = 'filtered'
+
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    output_path = os.path.join(output_directory, output_fastq)
+
+    with open(output_path, 'a') as fastq_file:
+        for name, (sequence, quality) in seq_dict.items():
+            fastq_file.write(f"{name}\n")
+            fastq_file.write(f"{sequence}\n")
+            fastq_file.write(f"+{name[1:]}\n")
+            fastq_file.write(f"{quality}\n")
