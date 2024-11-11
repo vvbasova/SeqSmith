@@ -57,22 +57,6 @@ def reverse_complement(sequences: List[str]) -> List[str]:
 
 
 def gc_content(sequences: List[str]) -> List[Union[int, float]]:
-    """
-    Вычисляет процент содержания гуанина и цитозина.
-    Результат округляется до трех знаков после запятой.
-
-    Args:
-        sequences (list of str):
-        Список строк с последовательностями нуклеиновых кислот.
-
-    Returns:
-        gc_contents (list of float):
-        Список процентов содержания G и C для каждой последовательности.
-
-    Example:
-        >>> gc_content(['ATGC', 'CGCG', 'AATT'])
-        [50.0, 100.0, 0.0]
-    """
     gc_contents = []
 
     for sequence in sequences:
@@ -86,22 +70,6 @@ def gc_content(sequences: List[str]) -> List[Union[int, float]]:
 
 
 def is_palindrome(sequences: List[str]) -> List[bool]:
-    """
-    Проверяет, являются ли последовательности палиндромами.
-
-    Args:
-        sequences (list of str):
-        Список строк с последовательностями нуклеиновых кислот.
-
-    Returns:
-        list of bool:
-        Список логических значений, где True  — палиндромная,
-        False — непалиндромная последовательность.
-
-    Example:
-        >>> is_palindrome(['ATGC', 'CGCG', 'AaTcgCGaTT'])
-        [False, True, True]
-    """
     complement_seq = reverse_complement(sequences)
     palindromes = []
 
@@ -112,22 +80,6 @@ def is_palindrome(sequences: List[str]) -> List[bool]:
 
 
 def nucleotide_count(sequences: List[str]) -> List[Dict[str, int]]:
-    """
-    Подсчитывает количество каждого нуклеотида в последовательности.
-
-    Args:
-        sequences (list of str):
-        Список строк с последовательностями нуклеиновых кислот.
-
-    Returns:
-        list of dict:
-        Список словарей, соответствующих введенным последовательностям,
-        где ключ — нуклеотид, значение — его количество.
-
-    Example:
-        >>> nucleotide_count(['ATAA', 'AaTTCaTCGG'])
-        [{'A': 3, 'T': 1}, {'A': 3, 'T': 3, 'C': 2, 'G': 2}]
-    """
     nucleotide_counts = []
 
     for sequence in sequences:
