@@ -21,17 +21,24 @@
 
 ___
 
-1. **run_dna_rna_tools**: proceeds various operations with DNA or RNA sequences.
+1. **Biological Sequence Classes**: Represents biological sequences (DNA, RNA, and amino acids) with support for various operations.
 
     - Supported operations: 
 
-       - `transcribe`: returns the result of transcribing DNA to RNA or reverse transcribing RNA to DNA.
-       - `reverse`: returns the reversed sequence of DNA or RNA.
-       - `complement`: returns a DNA sequence complementary to the input DNA, or an RNA sequence complementary to the input RNA.
-       - `reverse complement`: returns the reversed complementary sequence of DNA or RNA.
-       - `gc_content`: returns the GC content of the sequence as a percentage.
-       - `is_palindrome`: checks if the sequence is a palindrome.
-       - `nucleotide_count`: counts the number of each type of nucleotide in the sequence.
+       - `transcribe()`: returns the result of transcribing DNA to RNA or reverse transcribing RNA to DNA.
+       - `reverse()`: returns the reversed sequence of DNA or RNA.
+       - `complement()`: returns a DNA sequence complementary to the input DNA, or an RNA sequence complementary to the input RNA.
+       - `reverse complement()`: returns the reversed complementary sequence of DNA or RNA.
+       - `gc_content()`: returns the GC content of the sequence as a percentage.
+       - `is_palindrome()`: checks if the sequence is a palindrome.
+       - `nucleotide_count()`: counts the number of each type of nucleotide in the sequence.
+       - `molecular_weight()`: counts molecular weight of amino acid sequence
+    
+    - The following sequence types are supported:
+       
+       - `DNASequence`: Represents a DNA sequence, with transcription to RNA.
+       - `RNASequence`: Represents an RNA sequence.
+       - `AminoAcidSequence`: Represents an amino acid sequence, with functionality for calculating molecular weight.
 
 2. **filter_fastq**: filters FASTQ format sequences depending on set parameters.
 
@@ -70,23 +77,60 @@ import seqsmith
 
 ---
 
-1. **run_dna_rna_tools** function
+1. **Biological Sequence Classes** 
    
-   - Takes any number of nucleic acid sequences with the last argument corresponding to the selected procedure.
+   - `BiologicalSequence` class is the base class for all biological sequences. It provides basic functionality for sequence operations, such as length, indexing, and string representation.
 
-   - If multiple sequences are provided, the function will return a list with the result of the operation for each sequence. If a single sequence is provided, the result will be a string/dictionary/number (depending on the procedure).
+**Example:**
+
+
+```python
+my_sequence = DNASequence("ACTG")
+len(my_sequence) #4
+my_sequence[2] #T
+print(my_sequence) #ACTG
+print(repr(my_sequence)) #DNASequence('ACTG')
+```   
+
+   - `NucleicAcidSequence` class inherits from BiologicalSequence and
+includes methods for working with DNA and RNA sequences, such as complementing, reversing, and calculating GC content.
+
+
+**Example:**
+
+
+```python
+my_sequence = DNASequence("GTaAaaaTTTc")
+my_sequence.complement() #CAtTtttAAAg
+my_sequence.reverse_complement() #gAAAtttTtAC
+my_sequence.gc_content() #18.182
+my_sequence.reverse() #cTTTaaaAaTG
+my_sequence.nucleotide_count() #{'G': 1, 'T': 4, 'A': 5, 'C': 1}
+my_sequence.is_palindrome() #False
+```
+
+   - `DNASequence` and `RNASequence` classes inherit from `NucleicAcidSequence` and allows to use its methods specifically for DNA and RNA sequences. `DNASequence` also has method for transcribing DNA to RNA. `transcribe` method returns an RNASequence class instance. Methods `complement()`, `reverse_complement()`, `reverce()` return an instance of corresponding class (`DNAsequence` or `RNASequence`).  
 
 **Example:**
 
 ```python
-run_dna_rna_tools("ATG", "GTa", "transcribe") #['AUG', 'GUa']
-run_dna_rna_tools("GTa", "reverse") #aTG
-run_dna_rna_tools("GTaAaaaTTTc", "complement") #CAtTtttAAAg
-run_dna_rna_tools("GTaAaaaTTTc", "reverse_complement") #gAAAtttTtAC
-run_dna_rna_tools("GTaAaaaTTTc", "gc_content") #18.182
-run_dna_rna_tools("ATGCAT", "GTa", "is_palindrome") #[True, False]
-run_dna_rna_tools("GTaAaaaTTTc", "nucleotide_count") #{'G': 1, 'T': 4, 'A': 5, 'C': 1}
+my_dna_sequence = DNASequence("GTaAaaaTTTc")
+my_rna = my_dna_sequence.transcribe() 
+my_rna #RNASequence('GUaAaaaUUUc')
+
+my_rna_sequence = RNASequence("UCGA")
+my_rna_sequence.complement() #AGCU
 ```
+
+   - The `AminoAcidSequence` class provides as calculating molecular weight operation.
+
+**Example:**
+
+```python
+my_sequence = AminoAcidSequence("KEK")
+my_sequence.molecular_weight() #439.5
+```
+
 
 2. **filter_fastq** function
    
@@ -145,17 +189,15 @@ select_genes_from_gbk_to_fasta(input_gbk='file.gbk', output_fasta='new_file.fast
 ---
 
 - Python 3.x
-- `os` module installed
+- Biopython>=1.57
 
 ## Project Structure
 
 ```
 SeqSmith/
-├── seqsmith.py                # run_dna_rna_tools and filter_fastq functions
-├── bio_files_processor.py     # Reading bioinf files functions          
-├── utils/                     # Folder with additional functions
-│   ├── dna_rna_utils.py       # Additional functions for run_dna_rna_tools          
-│   └── filter_fastq_utils.py  # Additional functions for filter_fastq 
+├── seqsmith.py                # Biological Sequence Classes and filter_fastq functions
+├── bio_files_processor.py     # Reading bioinf files functions    
+├── requirements.txt           # System requirements       
 └── README.md                  # Project description
 
 ```
