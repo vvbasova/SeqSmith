@@ -1,8 +1,10 @@
 import os
+import click
 from abc import ABC, abstractmethod
 from Bio import SeqIO
 from Bio.SeqUtils import gc_fraction
 from typing import Dict, Union, Tuple
+from loguru import logger
 
 
 class BiologicalSequence(ABC):
@@ -174,13 +176,16 @@ def filter_fastq(
         input_fastq: str,
         output_fastq: str,
         gc_bounds: Union[Tuple, int, float] = (0, 100),
-        length_bounds: Union[Tuple[int, int], int] = (0, 2**32),
+        length_bounds: Union[Tuple[int, int], int] = (0, 2 ** 32),
         quality_threshold: Union[int, float] = 0
 ) -> None:
     """
     Filters reads from a FASTQ file based on GC content,
     sequence length, and quality score, and writes the filtered reads
     to a new FASTQ file in the 'filtered' directory.
+    Creates "./logs" directory and performs logging into
+    "./logs/filter_fastq.log" file.
+    The function is available from the terminal.
 
     Args:
         input_fastq (str): Path to the input FASTQ file.
@@ -194,7 +199,32 @@ def filter_fastq(
     output_directory = 'filtered'
     output_path = os.path.join(output_directory, output_fastq)
 
+    if not getattr(logger, "_configured", False):
+        os.makedirs("logs", exist_ok=True)
+        logger.add(
+            "logs/filter_fastq.log",
+            rotation="500 KB",
+            level="INFO",
+            format="""
+==================== {level} ====================
+Time:    <green>{time:YYYY-MM-DD HH:mm:ss}</green>
+Module:  <cyan>{name}</cyan>:{function}:{line}
+Message: {message}
+            """
+        )
+
+    logger.info(
+        f"""Starting FASTQ filtering:
+        Input: {input_fastq}
+        Output: {output_path}
+        GC bounds: {gc_bounds}
+        Length bounds: {length_bounds}
+        Quality ≥ {quality_threshold}
+        """
+    )
+
     if os.path.exists(output_path):
+        logger.error(f"Output file '{output_path}' already exists.")
         raise FileExistsError(f"File {output_fastq} already exists.")
 
     if isinstance(gc_bounds, (int, float)):
@@ -205,8 +235,12 @@ def filter_fastq(
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
+    filtered_count = 0
+    total_count = 0
+
     with (open(output_path, 'w') as out_file):
         for fastq_seq in SeqIO.parse(input_fastq, "fastq"):
+            total_count += 1
             seq_len = len(fastq_seq.seq)
             gc_content = gc_fraction(fastq_seq.seq) * 100
             sum_quality = sum(fastq_seq.letter_annotations["phred_quality"])
@@ -221,3 +255,44 @@ def filter_fastq(
                 continue
 
             SeqIO.write(fastq_seq, out_file, "fastq")
+            filtered_count += 1
+
+    logger.info(
+        f"""Filtering finished.
+        Total reads: {total_count} 
+        Passed filters: {filtered_count}
+        """
+    )
+
+
+@click.group()
+def cli():
+    """SeqSmith: bioinformatics tool"""
+    pass
+
+
+@cli.command(name="filter-fastq")
+@click.argument('input_fastq')
+@click.argument('output_fastq')
+@click.option('-g', '--gc-bounds', nargs=2, type=float, default=(0, 100), help='GC content bounds (e.g., 40 60).')
+@click.option('-l', '--length-bounds', nargs=2, type=int, default=(0, 2**32), help='Sequence length bounds.')
+@click.option('-q', '--quality-threshold', type=float, default=0, help='Minimum average quality threshold.')
+def filter_fastq_cmd(
+        input_fastq,
+        output_fastq,
+        gc_bounds,
+        length_bounds,
+        quality_threshold
+):
+    filter_fastq(
+        input_fastq=input_fastq,
+        output_fastq=output_fastq,
+        gc_bounds=gc_bounds,
+        length_bounds=length_bounds,
+        quality_threshold=quality_threshold
+    )
+    click.echo(f"File saved to ./filtered/{output_fastq}")
+
+
+if __name__ == '__main__':
+    cli()

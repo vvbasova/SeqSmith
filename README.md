@@ -140,12 +140,20 @@ my_sequence.molecular_weight() #439.5
    - The `quality_threshold` argument sets the minimum read quality threshold (default is 0).
    - Creates `<output_fastq>` file in the `filtered` directory located in a directory where script is executed.
    - If the directory `filtered` does not exist, it will be created.
+   - The function logs the execution process  in "./logs/filter_fastq.log" file. If the `log` directory doesn't exist, creates it.
+   - The function is available via Terminal
 
 
 **Example:**
 
 ```python
 filter_fastq(input_fastq = "file.fastq", output_fastq = "new_file.fastq", gc_bounds=(40, 100), length_bounds=50, quality_threshold=30)
+```
+
+```Terminal
+python seqsmith.py filter-fastq {input_file_name}.fastq {output_file_name}.fastq -g 50 100 -l 16 20 -q 30
+
+python seqsmith.py filter-fastq {input_file_name}.fastq {output_file_name}.fastq --gc_bounds 50 100 --length-bounds 16 20 --quality-threshold 30
 ```
 
 3. **convert_multiline_fasta_to_oneline** function
@@ -196,7 +204,12 @@ select_genes_from_gbk_to_fasta(input_gbk='file.gbk', output_fasta='new_file.fast
 ```
 SeqSmith/
 ├── seqsmith.py                # Biological Sequence Classes and filter_fastq functions
-├── bio_files_processor.py     # Reading bioinf files functions    
+├── bio_files_processor.py     # Reading bioinf files functions
+├── tests/                     # Directory for tests
+│   ├── data/
+│   │   └── example.fastq      
+│   ├── __init__.py
+│   └── test_filter_fastq.py   # Tests for filter_fastq function
 ├── requirements.txt           # System requirements       
 └── README.md                  # Project description
 
